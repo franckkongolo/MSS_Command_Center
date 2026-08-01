@@ -1,5 +1,5 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
-import { neon, NeonQueryFunction } from '@neondatabase/serverless';
+import { neon } from '@neondatabase/serverless';
 
 export type DatabaseShape = {
   clients: any[];
@@ -13,7 +13,7 @@ export type DatabaseShape = {
 
 @Injectable()
 export class DatabaseService implements OnModuleInit {
-  private sql!: NeonQueryFunction<boolean, boolean>;
+  private sql!: ReturnType<typeof neon>;
 
   private empty(): DatabaseShape {
     return {
@@ -72,12 +72,12 @@ export class DatabaseService implements OnModuleInit {
   }
 
   async read(): Promise<DatabaseShape> {
-    const rows = await this.sql`
+    const rows = (await this.sql`
       SELECT payload
       FROM mss_application_state
       WHERE id = 1
       LIMIT 1
-    `;
+    `) as Array<{ payload: unknown }>;
 
     if (!rows.length) {
       const initial = this.empty();
