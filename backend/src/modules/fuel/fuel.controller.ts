@@ -1,0 +1,1 @@
+import { Body,Controller,Delete,Get,Param,Post } from '@nestjs/common';import { FuelService } from './fuel.service';@Controller('fuel')export class FuelController{constructor(private readonly s:FuelService){}@Get()all(){return this.s.findAll()}@Post()create(@Body()b:any){return this.s.create(b)}@Delete(':id')remove(@Param('id')id:string){return this.s.remove(id)}}

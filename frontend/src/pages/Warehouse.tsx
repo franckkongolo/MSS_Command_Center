@@ -1,0 +1,1 @@
+export default function Warehouse(){return <><div className="top"><div><h1>Warehouse</h1><p>Stock, emplacements et mouvements</p></div><button className="btn">Mouvement de stock</button></div><div className="card">WMS Foundation : réception, picking, packing et expédition.</div></>}

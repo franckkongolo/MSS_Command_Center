@@ -1,0 +1,1 @@
+-- Use backend/prisma/schema.prisma as the primary schema.

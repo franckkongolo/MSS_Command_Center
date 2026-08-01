@@ -1,0 +1,1 @@
+import { Module } from '@nestjs/common';import { FuelController } from './fuel.controller';import { FuelService } from './fuel.service';import { DatabaseService } from '../../common/database.service';@Module({controllers:[FuelController],providers:[FuelService,DatabaseService]})export class FuelModule{}

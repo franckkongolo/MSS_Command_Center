@@ -1,0 +1,18 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: mss_platform
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports: ["5432:5432"]
+    volumes: [mss_pg:/var/lib/postgresql/data]
+  api:
+    build: ../backend
+    environment:
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/mss_platform
+      JWT_SECRET: change-me
+    ports: ["3000:3000"]
+    depends_on: [postgres]
+volumes:
+  mss_pg:

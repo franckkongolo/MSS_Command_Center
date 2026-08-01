@@ -1,0 +1,1 @@
+export default function Supply(){return <><div className="top"><div><h1>Supply</h1><p>Catalogue, fournisseurs et achats</p></div><button className="btn">Nouveau produit</button></div><div className="card">Module Supply prêt à connecter à PostgreSQL.</div></>}

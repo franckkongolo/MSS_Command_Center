@@ -1,0 +1,1 @@
+import { Module } from '@nestjs/common';import { NotificationsController } from './notifications.controller';import { DatabaseService } from '../../common/database.service';@Module({controllers:[NotificationsController],providers:[DatabaseService]})export class NotificationsModule{}

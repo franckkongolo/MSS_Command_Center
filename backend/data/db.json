@@ -1,0 +1,163 @@
+{
+  "clients": [
+    {
+      "id": "cli-kamoa",
+      "company": "Kamoa Contractor",
+      "contactName": "Responsable Logistique",
+      "phone": "+243 000 000 000",
+      "email": "logistics@example.com",
+      "address": "Kolwezi, Lualaba",
+      "sector": "Mining Contractor",
+      "paymentTerms": "30 jours",
+      "createdAt": "2026-08-01T08:00:00.000Z"
+    }
+  ],
+  "missions": [
+    {
+      "id": "mis-demo-1",
+      "number": "MIS-2026-001",
+      "clientId": "cli-kamoa",
+      "service": "Transport",
+      "origin": "Kolwezi",
+      "destination": "Kamoa",
+      "missionDate": "2026-08-01",
+      "vehicle": "Canter Box",
+      "driver": "Jean",
+      "revenue": 200,
+      "cost": 50,
+      "status": "En route",
+      "createdAt": "2026-08-01T08:30:00.000Z",
+      "timeline": [
+        {
+          "status": "Planifiée",
+          "at": "2026-08-01T08:30:00.000Z"
+        },
+        {
+          "status": "En route",
+          "at": "2026-08-01T09:00:00.000Z"
+        }
+      ],
+      "vehicleId": "veh-canter",
+      "driverId": "drv-jean"
+    }
+  ],
+  "vehicles": [
+    {
+      "id": "veh-canter",
+      "code": "MSS001",
+      "registration": "MSS-001",
+      "brand": "Mitsubishi",
+      "model": "Canter Box",
+      "year": 2013,
+      "type": "Camion caisse",
+      "capacityTons": 3,
+      "mileageKm": 125400,
+      "status": "Disponible",
+      "location": "Kolwezi",
+      "insuranceExpiry": "2026-12-15",
+      "inspectionExpiry": "2026-11-30",
+      "nextServiceKm": 128000,
+      "fuelType": "Diesel",
+      "createdAt": "2026-08-01T08:00:00.000Z"
+    },
+    {
+      "id": "veh-hino",
+      "code": "MSS002",
+      "registration": "MSS-002",
+      "brand": "Hino",
+      "model": "Cold Chain 2T",
+      "year": 2012,
+      "type": "Camion frigorifique",
+      "capacityTons": 2,
+      "mileageKm": 148200,
+      "status": "Maintenance",
+      "location": "Kolwezi",
+      "insuranceExpiry": "2027-01-20",
+      "inspectionExpiry": "2026-10-10",
+      "nextServiceKm": 148000,
+      "fuelType": "Diesel",
+      "createdAt": "2026-08-01T08:00:00.000Z"
+    },
+    {
+      "id": "veh-caravan",
+      "code": "MSS003",
+      "registration": "MSS-003",
+      "brand": "Nissan",
+      "model": "Caravan NV350",
+      "year": 2015,
+      "type": "Minibus",
+      "capacityTons": 0.8,
+      "mileageKm": 204104,
+      "status": "Disponible",
+      "location": "Kolwezi",
+      "insuranceExpiry": "2026-09-30",
+      "inspectionExpiry": "2026-09-15",
+      "nextServiceKm": 205000,
+      "fuelType": "Essence",
+      "createdAt": "2026-08-01T08:00:00.000Z"
+    }
+  ],
+  "drivers": [
+    {
+      "id": "drv-jean",
+      "employeeCode": "DRV001",
+      "name": "Jordan",
+      "phone": "+243 993 002 128",
+      "email": "",
+      "licenseNumber": "DL-001",
+      "licenseCategory": "C",
+      "licenseExpiry": "2028-03-10",
+      "medicalExpiry": "2027-02-15",
+      "hseStatus": "Valide",
+      "status": "Disponible",
+      "rating": 8.8,
+      "createdAt": "2026-08-01T08:00:00.000Z"
+    },
+    {
+      "id": "drv-patrick",
+      "employeeCode": "DRV002",
+      "name": "Elisee",
+      "phone": "",
+      "email": "",
+      "licenseNumber": "",
+      "licenseCategory": "C1",
+      "licenseExpiry": "2026-09-05",
+      "medicalExpiry": "2026-12-01",
+      "hseStatus": "À renouveler",
+      "status": "Disponible",
+      "rating": 10.5,
+      "createdAt": "2026-08-01T08:00:00.000Z"
+    }
+  ],
+  "maintenance": [
+    {
+      "id": "mnt-hino-1",
+      "number": "MNT-2026-001",
+      "vehicleId": "veh-hino",
+      "serviceDate": "2026-08-01",
+      "type": "Préventive",
+      "description": "Vidange et contrôle du groupe frigorifique",
+      "garage": "Atelier MSS",
+      "cost": 180,
+      "nextDate": "2026-11-01",
+      "nextMileage": 153000,
+      "status": "En cours",
+      "createdAt": "2026-08-01T08:00:00.000Z"
+    }
+  ],
+  "fuelLogs": [
+    {
+      "id": "fuel-1",
+      "number": "FUEL-2026-001",
+      "vehicleId": "veh-canter",
+      "fuelDate": "2026-08-01",
+      "liters": 35,
+      "pricePerLiter": 1.45,
+      "totalCost": 50.75,
+      "mileage": 125400,
+      "station": "Station Kolwezi",
+      "createdAt": "2026-08-01T08:00:00.000Z"
+    }
+  ],
+  "notifications": []
+}
