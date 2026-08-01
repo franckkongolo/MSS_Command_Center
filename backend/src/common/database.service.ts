@@ -1,6 +1,5 @@
-import { Injectable } from '@nestjs/common';
-import { promises as fs } from 'node:fs';
-import { join } from 'node:path';
+import { Injectable, OnModuleInit } from '@nestjs/common';
+import { neon, NeonQueryFunction } from '@neondatabase/serverless';
 
 export type DatabaseShape = {
   clients: any[];
@@ -13,13 +12,8 @@ export type DatabaseShape = {
 };
 
 @Injectable()
-export class DatabaseService {
-  private readonly seedPath = join(process.cwd(), 'data', 'db.json');
-
-  private readonly runtimePath =
-    process.env.VERCEL
-      ? '/tmp/mss-command-center-db.json'
-      : this.seedPath;
+export class DatabaseService implements OnModuleInit {
+  private sql!: NeonQueryFunction<boolean, boolean>;
 
   private empty(): DatabaseShape {
     return {
@@ -33,53 +27,81 @@ export class DatabaseService {
     };
   }
 
-  private normalize(parsed: any): DatabaseShape {
+  async onModuleInit(): Promise<void> {
+    const connectionString =
+      process.env.STORAGE_URL ||
+      process.env.DATABASE_URL;
+
+    if (!connectionString) {
+      throw new Error(
+        'Variable PostgreSQL absente : STORAGE_URL ou DATABASE_URL.',
+      );
+    }
+
+    this.sql = neon(connectionString);
+
+    await this.sql`
+      CREATE TABLE IF NOT EXISTS mss_application_state (
+        id INTEGER PRIMARY KEY,
+        payload JSONB NOT NULL,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `;
+
+    await this.sql`
+      INSERT INTO mss_application_state (id, payload)
+      VALUES (1, ${JSON.stringify(this.empty())}::jsonb)
+      ON CONFLICT (id) DO NOTHING
+    `;
+  }
+
+  private normalize(value: any): DatabaseShape {
     return {
-      clients: Array.isArray(parsed?.clients) ? parsed.clients : [],
-      missions: Array.isArray(parsed?.missions) ? parsed.missions : [],
-      vehicles: Array.isArray(parsed?.vehicles) ? parsed.vehicles : [],
-      drivers: Array.isArray(parsed?.drivers) ? parsed.drivers : [],
-      maintenance: Array.isArray(parsed?.maintenance) ? parsed.maintenance : [],
-      fuelLogs: Array.isArray(parsed?.fuelLogs) ? parsed.fuelLogs : [],
-      notifications: Array.isArray(parsed?.notifications)
-        ? parsed.notifications
+      clients: Array.isArray(value?.clients) ? value.clients : [],
+      missions: Array.isArray(value?.missions) ? value.missions : [],
+      vehicles: Array.isArray(value?.vehicles) ? value.vehicles : [],
+      drivers: Array.isArray(value?.drivers) ? value.drivers : [],
+      maintenance: Array.isArray(value?.maintenance)
+        ? value.maintenance
+        : [],
+      fuelLogs: Array.isArray(value?.fuelLogs) ? value.fuelLogs : [],
+      notifications: Array.isArray(value?.notifications)
+        ? value.notifications
         : [],
     };
   }
 
   async read(): Promise<DatabaseShape> {
-    try {
-      const raw = await fs.readFile(this.runtimePath, 'utf8');
-      return this.normalize(JSON.parse(raw));
-    } catch {}
+    const rows = await this.sql`
+      SELECT payload
+      FROM mss_application_state
+      WHERE id = 1
+      LIMIT 1
+    `;
 
-    try {
-      const raw = await fs.readFile(this.seedPath, 'utf8');
-      const data = this.normalize(JSON.parse(raw));
-
-      if (process.env.VERCEL) {
-        await fs.writeFile(
-          this.runtimePath,
-          JSON.stringify(data, null, 2),
-          'utf8',
-        );
-      }
-
-      return data;
-    } catch {
-      return this.empty();
+    if (!rows.length) {
+      const initial = this.empty();
+      await this.write(initial);
+      return initial;
     }
+
+    return this.normalize(rows[0].payload);
   }
 
   async write(data: DatabaseShape): Promise<void> {
-    if (!process.env.VERCEL) {
-      await fs.mkdir(join(process.cwd(), 'data'), { recursive: true });
-    }
+    const normalized = this.normalize(data);
 
-    await fs.writeFile(
-      this.runtimePath,
-      JSON.stringify(data, null, 2),
-      'utf8',
-    );
+    await this.sql`
+      INSERT INTO mss_application_state (id, payload, updated_at)
+      VALUES (
+        1,
+        ${JSON.stringify(normalized)}::jsonb,
+        NOW()
+      )
+      ON CONFLICT (id)
+      DO UPDATE SET
+        payload = EXCLUDED.payload,
+        updated_at = NOW()
+    `;
   }
 }
