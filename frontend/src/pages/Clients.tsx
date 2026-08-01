@@ -1,55 +1,468 @@
-import { FormEvent, useEffect, useState } from 'react';
-import { clientsApi } from '../lib/api';
-import type { Client } from '../types';
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 
-const blank={company:'',contactName:'',phone:'',email:'',address:'',sector:'',paymentTerms:'30 jours'};
+type Client = {
+  id: string;
+  company: string;
+  contactName?: string;
+  phone?: string;
+  email?: string;
+  sector?: string;
+  status?: string;
+  address?: string;
+  createdAt?: string;
+};
 
-export default function Clients(){
-  const [clients,setClients]=useState<Client[]>([]);
-  const [form,setForm]=useState(blank);
-  const [open,setOpen]=useState(false);
-  const [editing,setEditing]=useState<Client|null>(null);
-  const [error,setError]=useState('');
+type ClientForm = {
+  company: string;
+  contactName: string;
+  phone: string;
+  email: string;
+  sector: string;
+  status: string;
+  address: string;
+};
 
-  const load=async()=>{try{setClients(await clientsApi.list());setError('')}catch(e){setError('API indisponible. Vérifie le backend.')}};
-  useEffect(()=>{void load()},[]);
+const EMPTY_FORM: ClientForm = {
+  company: '',
+  contactName: '',
+  phone: '',
+  email: '',
+  sector: '',
+  status: 'Actif',
+  address: '',
+};
 
-  function startEdit(c:Client){
-    setEditing(c);
+const API_BASE = '/api';
+
+export default function Clients() {
+  const [clients, setClients] = useState<Client[]>([]);
+  const [form, setForm] = useState<ClientForm>(EMPTY_FORM);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [showForm, setShowForm] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+
+  const loadClients = useCallback(async () => {
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch(`${API_BASE}/clients`, {
+        headers: { Accept: 'application/json' },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erreur API ${response.status}`);
+      }
+
+      const data = await response.json();
+      setClients(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Impossible de charger les clients.',
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadClients();
+  }, [loadClients]);
+
+  const filteredClients = useMemo(() => {
+    const term = search.trim().toLowerCase();
+
+    if (!term) return clients;
+
+    return clients.filter((client) =>
+      [
+        client.company,
+        client.contactName,
+        client.phone,
+        client.email,
+        client.sector,
+        client.status,
+      ].some((value) => value?.toLowerCase().includes(term)),
+    );
+  }, [clients, search]);
+
+  function updateField<K extends keyof ClientForm>(
+    field: K,
+    value: ClientForm[K],
+  ) {
+    setForm((current) => ({ ...current, [field]: value }));
+  }
+
+  function resetForm() {
+    setForm(EMPTY_FORM);
+    setEditingId(null);
+    setShowForm(false);
+  }
+
+  function startEdit(client: Client) {
+    setEditingId(client.id);
     setForm({
-      company:c.company,contactName:c.contactName||'',phone:c.phone||'',email:c.email||'',
-      address:c.address||'',sector:c.sector||'',paymentTerms:c.paymentTerms||''
+      company: client.company ?? '',
+      contactName: client.contactName ?? '',
+      phone: client.phone ?? '',
+      email: client.email ?? '',
+      sector: client.sector ?? '',
+      status: client.status ?? 'Actif',
+      address: client.address ?? '',
     });
-    setOpen(true);
+    setShowForm(true);
+    setMessage('');
+    setError('');
   }
 
-  async function submit(e:FormEvent){
-    e.preventDefault();
-    if(editing) await clientsApi.update(editing.id,form);
-    else await clientsApi.create(form);
-    setForm(blank);setEditing(null);setOpen(false);await load();
+  async function submitClient(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!form.company.trim()) {
+      setError("Le nom de l'entreprise est obligatoire.");
+      return;
+    }
+
+    setSaving(true);
+    setMessage('');
+    setError('');
+
+    try {
+      const url = editingId
+        ? `${API_BASE}/clients/${editingId}`
+        : `${API_BASE}/clients`;
+
+      const response = await fetch(url, {
+        method: editingId ? 'PATCH' : 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          company: form.company.trim(),
+          contactName: form.contactName.trim(),
+          phone: form.phone.trim(),
+          email: form.email.trim(),
+          sector: form.sector.trim(),
+          status: form.status,
+          address: form.address.trim(),
+        }),
+      });
+
+      if (!response.ok) {
+        const body = await response.text();
+        throw new Error(
+          body || `Échec de l'enregistrement — erreur ${response.status}`,
+        );
+      }
+
+      setMessage(
+        editingId
+          ? 'Client modifié avec succès.'
+          : 'Client enregistré avec succès.',
+      );
+
+      resetForm();
+      await loadClients();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Impossible d'enregistrer le client.",
+      );
+    } finally {
+      setSaving(false);
+    }
   }
 
-  async function remove(id:string){
-    if(!confirm('Supprimer ce client ?'))return;
-    try{await clientsApi.remove(id);await load()}catch{alert('Impossible de supprimer ce client car il est lié à une mission.')}
+  async function deleteClient(client: Client) {
+    const confirmed = window.confirm(
+      `Supprimer définitivement le client « ${client.company} » ?`,
+    );
+
+    if (!confirmed) return;
+
+    setMessage('');
+    setError('');
+
+    try {
+      const response = await fetch(`${API_BASE}/clients/${client.id}`, {
+        method: 'DELETE',
+        headers: { Accept: 'application/json' },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Suppression impossible — erreur ${response.status}`);
+      }
+
+      setMessage('Client supprimé.');
+      await loadClients();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Impossible de supprimer le client.',
+      );
+    }
   }
 
-  return <><div className="top"><div><h1>CRM Clients</h1><p>Clients, contacts et conditions commerciales</p></div><button className="btn" onClick={()=>{setEditing(null);setForm(blank);setOpen(true)}}>＋ Nouveau client</button></div>
-  {error&&<div className="card" style={{color:'#b42318'}}>{error}</div>}
-  <div className="grid"><div className="card"><small>Total clients</small><div className="value">{clients.length}</div></div><div className="card"><small>Secteurs représentés</small><div className="value">{new Set(clients.map(c=>c.sector).filter(Boolean)).size}</div></div></div>
-  <div className="card"><table className="table"><thead><tr><th>Entreprise</th><th>Contact</th><th>Téléphone</th><th>Email</th><th>Secteur</th><th>Conditions</th><th>Actions</th></tr></thead><tbody>
-  {clients.map(c=><tr key={c.id}><td><strong>{c.company}</strong><br/><small>{c.address||'—'}</small></td><td>{c.contactName||'—'}</td><td>{c.phone||'—'}</td><td>{c.email||'—'}</td><td><span className="badge">{c.sector||'Non défini'}</span></td><td>{c.paymentTerms||'—'}</td><td><button className="mini" onClick={()=>startEdit(c)}>Modifier</button> <button className="mini danger" onClick={()=>remove(c.id)}>Supprimer</button></td></tr>)}
-  </tbody></table></div>
-  {open&&<div className="overlay"><form className="modal-form" onSubmit={submit}><h2>{editing?'Modifier le client':'Nouveau client'}</h2>
-    <label>Entreprise<input required value={form.company} onChange={e=>setForm({...form,company:e.target.value})}/></label>
-    <label>Contact principal<input value={form.contactName} onChange={e=>setForm({...form,contactName:e.target.value})}/></label>
-    <label>Téléphone<input value={form.phone} onChange={e=>setForm({...form,phone:e.target.value})}/></label>
-    <label>Email<input type="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})}/></label>
-    <label>Adresse<input value={form.address} onChange={e=>setForm({...form,address:e.target.value})}/></label>
-    <label>Secteur<input placeholder="Mine, importateur, industrie..." value={form.sector} onChange={e=>setForm({...form,sector:e.target.value})}/></label>
-    <label>Conditions de paiement<input value={form.paymentTerms} onChange={e=>setForm({...form,paymentTerms:e.target.value})}/></label>
-    <div className="modal-actions"><button type="button" className="mini" onClick={()=>setOpen(false)}>Annuler</button><button className="btn">Enregistrer</button></div>
-  </form></div>}
-  </>
+  return (
+    <main className="page">
+      <section
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: 16,
+          marginBottom: 24,
+        }}
+      >
+        <div>
+          <h1 style={{ marginBottom: 6 }}>CRM Clients</h1>
+          <p style={{ margin: 0 }}>
+            Clients, contacts et informations commerciales
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            setForm(EMPTY_FORM);
+            setEditingId(null);
+            setShowForm(true);
+            setMessage('');
+            setError('');
+          }}
+        >
+          + Nouveau client
+        </button>
+      </section>
+
+      {message && (
+        <div
+          style={{
+            padding: 12,
+            marginBottom: 16,
+            border: '1px solid #b7dfc5',
+            borderRadius: 8,
+          }}
+        >
+          {message}
+        </div>
+      )}
+
+      {error && (
+        <div
+          style={{
+            padding: 12,
+            marginBottom: 16,
+            border: '1px solid #e5a5a5',
+            borderRadius: 8,
+          }}
+        >
+          {error}
+        </div>
+      )}
+
+      {showForm && (
+        <section
+          style={{
+            padding: 20,
+            marginBottom: 24,
+            border: '1px solid #ddd',
+            borderRadius: 12,
+          }}
+        >
+          <h2>{editingId ? 'Modifier le client' : 'Nouveau client'}</h2>
+
+          <form onSubmit={submitClient}>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                gap: 14,
+              }}
+            >
+              <label>
+                Entreprise *
+                <input
+                  value={form.company}
+                  onChange={(event) =>
+                    updateField('company', event.target.value)
+                  }
+                  required
+                />
+              </label>
+
+              <label>
+                Contact
+                <input
+                  value={form.contactName}
+                  onChange={(event) =>
+                    updateField('contactName', event.target.value)
+                  }
+                />
+              </label>
+
+              <label>
+                Téléphone
+                <input
+                  value={form.phone}
+                  onChange={(event) =>
+                    updateField('phone', event.target.value)
+                  }
+                />
+              </label>
+
+              <label>
+                E-mail
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={(event) =>
+                    updateField('email', event.target.value)
+                  }
+                />
+              </label>
+
+              <label>
+                Secteur
+                <input
+                  value={form.sector}
+                  onChange={(event) =>
+                    updateField('sector', event.target.value)
+                  }
+                />
+              </label>
+
+              <label>
+                Statut
+                <select
+                  value={form.status}
+                  onChange={(event) =>
+                    updateField('status', event.target.value)
+                  }
+                >
+                  <option value="Prospect">Prospect</option>
+                  <option value="Actif">Actif</option>
+                  <option value="Inactif">Inactif</option>
+                </select>
+              </label>
+
+              <label style={{ gridColumn: '1 / -1' }}>
+                Adresse
+                <input
+                  value={form.address}
+                  onChange={(event) =>
+                    updateField('address', event.target.value)
+                  }
+                />
+              </label>
+            </div>
+
+            <div
+              style={{
+                display: 'flex',
+                gap: 10,
+                marginTop: 18,
+              }}
+            >
+              <button type="submit" disabled={saving}>
+                {saving
+                  ? 'Enregistrement...'
+                  : editingId
+                    ? 'Enregistrer les modifications'
+                    : 'Enregistrer le client'}
+              </button>
+
+              <button type="button" onClick={resetForm}>
+                Annuler
+              </button>
+            </div>
+          </form>
+        </section>
+      )}
+
+      <section>
+        <input
+          type="search"
+          placeholder="Rechercher un client..."
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          style={{
+            width: '100%',
+            maxWidth: 420,
+            marginBottom: 18,
+          }}
+        />
+
+        {loading ? (
+          <p>Chargement des clients...</p>
+        ) : filteredClients.length === 0 ? (
+          <div
+            style={{
+              padding: 28,
+              border: '1px solid #ddd',
+              borderRadius: 12,
+              textAlign: 'center',
+            }}
+          >
+            Aucun client enregistré.
+          </div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  <th>Entreprise</th>
+                  <th>Contact</th>
+                  <th>Téléphone</th>
+                  <th>E-mail</th>
+                  <th>Secteur</th>
+                  <th>Statut</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {filteredClients.map((client) => (
+                  <tr key={client.id}>
+                    <td>{client.company}</td>
+                    <td>{client.contactName || '—'}</td>
+                    <td>{client.phone || '—'}</td>
+                    <td>{client.email || '—'}</td>
+                    <td>{client.sector || '—'}</td>
+                    <td>{client.status || '—'}</td>
+                    <td>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button
+                          type="button"
+                          onClick={() => startEdit(client)}
+                        >
+                          Modifier
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => void deleteClient(client)}
+                        >
+                          Supprimer
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+    </main>
+  );
 }
