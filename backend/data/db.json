@@ -10,6 +10,17 @@
       "sector": "Mining Contractor",
       "paymentTerms": "30 jours",
       "createdAt": "2026-08-01T08:00:00.000Z"
+    },
+    {
+      "company": "test Neon Mss",
+      "contactName": "Franck",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "sector": "test",
+      "paymentTerms": "30 jours",
+      "id": "f961642b-6a5d-469a-9534-abb34381d1c6",
+      "createdAt": "2026-08-01T17:23:25.534Z"
     }
   ],
   "missions": [
@@ -95,6 +106,24 @@
       "nextServiceKm": 205000,
       "fuelType": "Essence",
       "createdAt": "2026-08-01T08:00:00.000Z"
+    },
+    {
+      "code": "MSS004",
+      "registration": "",
+      "brand": "Toyota",
+      "model": "Alphard",
+      "year": 2008,
+      "type": "Bus",
+      "capacityTons": 0,
+      "mileageKm": 357,
+      "status": "Disponible",
+      "location": "Kolwezi",
+      "insuranceExpiry": "",
+      "inspectionExpiry": "",
+      "nextServiceKm": 0,
+      "fuelType": "Essence",
+      "id": "9d6d5784-ec9d-493b-9411-847f18000ada",
+      "createdAt": "2026-08-01T16:41:00.858Z"
     }
   ],
   "drivers": [
