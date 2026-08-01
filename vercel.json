@@ -2,14 +2,14 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "services": {
     "frontend": {
-      "root": "frontend",
-      "framework": "vite",
-      "mountPath": "/"
+      "entrypoint": "frontend",
+      "routePrefix": "/",
+      "framework": "vite"
     },
     "backend": {
-      "root": "backend",
-      "framework": "nestjs",
-      "mountPath": "/api"
+      "entrypoint": "backend",
+      "routePrefix": "/api",
+      "framework": "nestjs"
     }
   }
 }
